@@ -290,6 +290,119 @@ app.delete('/api/rows/:id', (req, res) => {
   res.json({ success: true });
 });
 
+// ==================== 影刀 API ====================
+
+// 影刀批量导入销售数据
+app.post('/api/yingdao/sales', (req, res) => {
+  const { records } = req.body;
+
+  if (!Array.isArray(records) || records.length === 0) {
+    return res.status(400).json({ error: '请提供销售记录数组' });
+  }
+
+  const results = [];
+  const tableId = 1; // 实时销售表的ID
+
+  // 字段ID映射（根据实际创建的字段）
+  const fieldMap = {
+    '名称': 1,
+    '状态': 2,
+    '负责人': 3,
+    '创建时间': 4,
+    '商品名称': 5,
+    '数量': 6,
+    '单价': 7,
+    '总价': 8,
+    '销售渠道': 9,
+    '销售时间': 10,
+    '订单状态': 11
+  };
+
+  for (const record of records) {
+    try {
+      // 创建新行
+      const rowResult = runSQL('INSERT INTO rows (table_id) VALUES (?)', [tableId]);
+      const rowId = rowResult.lastInsertRowid;
+
+      // 插入每个字段的数据
+      for (const [fieldName, value] of Object.entries(record)) {
+        // 查找字段ID
+        const field = queryOne('SELECT id FROM fields WHERE table_id = ? AND name = ?', [tableId, fieldName]);
+        if (field && value !== undefined && value !== null && value !== '') {
+          runSQL('INSERT INTO cells (row_id, field_id, value) VALUES (?, ?, ?)', [rowId, field.id, String(value)]);
+        }
+      }
+
+      results.push({ success: true, rowId, data: record });
+    } catch (err) {
+      results.push({ success: false, error: err.message, data: record });
+    }
+  }
+
+  res.json({
+    success: true,
+    total: records.length,
+    imported: results.filter(r => r.success).length,
+    failed: results.filter(r => !r.success).length,
+    results
+  });
+});
+
+// 影刀快速添加单条销售记录
+app.post('/api/yingdao/sale', (req, res) => {
+  const { 商品名称, 数量, 单价, 总价, 销售渠道, 销售时间, 订单状态 } = req.body;
+
+  const tableId = 1; // 实时销售表的ID
+
+  try {
+    // 创建新行
+    const rowResult = runSQL('INSERT INTO rows (table_id) VALUES (?)', [tableId]);
+    const rowId = rowResult.lastInsertRowid;
+
+    // 插入数据
+    const fields = { 商品名称, 数量, 单价, 总价, 销售渠道, 销售时间, 订单状态 };
+    for (const [fieldName, value] of Object.entries(fields)) {
+      if (value !== undefined && value !== null && value !== '') {
+        const field = queryOne('SELECT id FROM fields WHERE table_id = ? AND name = ?', [tableId, fieldName]);
+        if (field) {
+          runSQL('INSERT INTO cells (row_id, field_id, value) VALUES (?, ?, ?)', [rowId, field.id, String(value)]);
+        }
+      }
+    }
+
+    res.json({ success: true, rowId, message: '销售记录添加成功' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 影刀清空销售数据（可选）
+app.delete('/api/yingdao/sales', (req, res) => {
+  const tableId = 1;
+
+  try {
+    const rows = queryAll('SELECT id FROM rows WHERE table_id = ?', [tableId]);
+    const rowIds = rows.map(r => r.id);
+
+    if (rowIds.length > 0) {
+      const placeholders = rowIds.map(() => '?').join(',');
+      runSQL(`DELETE FROM cells WHERE row_id IN (${placeholders})`, rowIds);
+      runSQL('DELETE FROM rows WHERE table_id = ?', [tableId]);
+    }
+
+    res.json({ success: true, message: `已清空 ${rowIds.length} 条销售记录` });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 影刀获取字段列表
+app.get('/api/yingdao/fields', (req, res) => {
+  const tableId = 1;
+  const fields = queryAll('SELECT id, name, type, options FROM fields WHERE table_id = ? ORDER BY "order"', [tableId]);
+  res.json(fields);
+});
+
 // 初始化并启动服务器
 initDB().then(() => {
   app.listen(PORT, () => {
