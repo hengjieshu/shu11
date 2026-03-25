@@ -12,6 +12,12 @@ function App() {
   const [newOption, setNewOption] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // 视图模式状态
+  const [viewMode, setViewMode] = useState('table') // 'table' | 'kanban' | 'calendar'
+  const [kanbanField, setKanbanField] = useState(null) // 看板分组字段
+  const [dateField, setDateField] = useState(null) // 日历日期字段
+  const [currentMonth, setCurrentMonth] = useState(new Date()) // 日历当前月份
+
   // 加载所有表格
   useEffect(() => {
     fetch('/api/tables')
@@ -30,6 +36,12 @@ function App() {
         .then(([fieldsData, rowsData]) => {
           setFields(fieldsData)
           setRows(rowsData)
+          // 自动选择看板字段（第一个select类型）
+          const selectField = fieldsData.find(f => f.type === 'select')
+          setKanbanField(selectField || null)
+          // 自动选择日期字段
+          const dateFld = fieldsData.find(f => f.type === 'date')
+          setDateField(dateFld || null)
         })
         .catch(err => console.error('加载数据失败:', err))
     }
@@ -132,6 +144,13 @@ function App() {
           data: { [`field_${fieldId}`]: value }
         })
       })
+      // 更新本地状态
+      setRows(rows.map(r => {
+        if (r.id === rowId) {
+          return { ...r, [`field_${fieldId}`]: value }
+        }
+        return r
+      }))
     } catch (err) {
       console.error('更新单元格失败:', err)
     }
@@ -197,6 +216,273 @@ function App() {
     )
   }
 
+  // 获取字段值
+  const getFieldValue = (row, fieldId) => {
+    return row[`field_${fieldId}`] || ''
+  }
+
+  // 渲染看板视图
+  const renderKanbanView = () => {
+    if (!kanbanField) {
+      return (
+        <div className="kanban-empty">
+          <p>需要添加「下拉选择」类型的字段才能使用看板视图</p>
+        </div>
+      )
+    }
+
+    const options = kanbanField.options ? JSON.parse(kanbanField.options) : []
+    const nameField = fields.find(f => f.type === 'text') // 用于显示卡片标题
+
+    return (
+      <div className="kanban-container">
+        <div className="kanban-settings">
+          <label>分组字段：</label>
+          <select
+            value={kanbanField.id}
+            onChange={(e) => setKanbanField(fields.find(f => f.id === parseInt(e.target.value)))}
+          >
+            {fields.filter(f => f.type === 'select').map(f => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="kanban-board">
+          {options.map(option => {
+            const columnRows = rows.filter(r => getFieldValue(r, kanbanField.id) === option)
+            return (
+              <div key={option} className="kanban-column">
+                <div className="kanban-column-header">
+                  <span className="kanban-column-title">{option}</span>
+                  <span className="kanban-column-count">{columnRows.length}</span>
+                </div>
+                <div className="kanban-cards">
+                  {columnRows.map(row => (
+                    <div key={row.id} className="kanban-card">
+                      <div className="kanban-card-title">
+                        {nameField ? getFieldValue(row, nameField.id) || '未命名' : `记录 #${row.id}`}
+                      </div>
+                      {fields.filter(f => f.id !== kanbanField.id && f.id !== nameField?.id).slice(0, 3).map(field => (
+                        <div key={field.id} className="kanban-card-field">
+                          <span className="kanban-card-field-label">{field.name}:</span>
+                          <span className="kanban-card-field-value">
+                            {field.type === 'select' ? (
+                              <span className={`status-badge status-${getFieldValue(row, field.id)}`}>
+                                {getFieldValue(row, field.id) || '-'}
+                              </span>
+                            ) : getFieldValue(row, field.id) || '-'}
+                          </span>
+                        </div>
+                      ))}
+                      <button
+                        className="kanban-card-delete"
+                        onClick={() => handleDeleteRow(row.id)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {columnRows.length === 0 && (
+                    <div className="kanban-card-empty">暂无数据</div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+          {/* 未分类列 */}
+          <div className="kanban-column">
+            <div className="kanban-column-header">
+              <span className="kanban-column-title">未分类</span>
+              <span className="kanban-column-count">
+                {rows.filter(r => !getFieldValue(r, kanbanField.id)).length}
+              </span>
+            </div>
+            <div className="kanban-cards">
+              {rows.filter(r => !getFieldValue(r, kanbanField.id)).map(row => (
+                <div key={row.id} className="kanban-card">
+                  <div className="kanban-card-title">
+                    {nameField ? getFieldValue(row, nameField.id) || '未命名' : `记录 #${row.id}`}
+                  </div>
+                  <button
+                    className="kanban-card-delete"
+                    onClick={() => handleDeleteRow(row.id)}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 渲染日历视图
+  const renderCalendarView = () => {
+    if (!dateField) {
+      return (
+        <div className="calendar-empty">
+          <p>需要添加「日期」类型的字段才能使用日历视图</p>
+        </div>
+      )
+    }
+
+    const getDaysInMonth = (date) => {
+      const year = date.getFullYear()
+      const month = date.getMonth()
+      const firstDay = new Date(year, month, 1)
+      const lastDay = new Date(year, month + 1, 0)
+      const daysInMonth = lastDay.getDate()
+      const startingDay = firstDay.getDay()
+
+      const days = []
+      // 前置空白
+      for (let i = 0; i < startingDay; i++) {
+        days.push(null)
+      }
+      // 月份日期
+      for (let i = 1; i <= daysInMonth; i++) {
+        days.push(i)
+      }
+      return days
+    }
+
+    const getRowsForDate = (day) => {
+      if (!day) return []
+      const year = currentMonth.getFullYear()
+      const month = currentMonth.getMonth() + 1
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      return rows.filter(r => getFieldValue(r, dateField.id) === dateStr)
+    }
+
+    const prevMonth = () => {
+      setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))
+    }
+
+    const nextMonth = () => {
+      setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
+    }
+
+    const nameField = fields.find(f => f.type === 'text')
+    const days = getDaysInMonth(currentMonth)
+    const weekDays = ['日', '一', '二', '三', '四', '五', '六']
+    const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+
+    return (
+      <div className="calendar-container">
+        <div className="calendar-settings">
+          <label>日期字段：</label>
+          <select
+            value={dateField.id}
+            onChange={(e) => setDateField(fields.find(f => f.id === parseInt(e.target.value)))}
+          >
+            {fields.filter(f => f.type === 'date').map(f => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="calendar-header">
+          <button className="calendar-nav-btn" onClick={prevMonth}>‹</button>
+          <span className="calendar-title">
+            {currentMonth.getFullYear()}年 {monthNames[currentMonth.getMonth()]}
+          </span>
+          <button className="calendar-nav-btn" onClick={nextMonth}>›</button>
+        </div>
+        <div className="calendar-grid">
+          <div className="calendar-weekdays">
+            {weekDays.map(day => (
+              <div key={day} className="calendar-weekday">{day}</div>
+            ))}
+          </div>
+          <div className="calendar-days">
+            {days.map((day, index) => {
+              const dayRows = getRowsForDate(day)
+              return (
+                <div key={index} className={`calendar-day ${day ? '' : 'empty'} ${day === new Date().getDate() && currentMonth.getMonth() === new Date().getMonth() && currentMonth.getFullYear() === new Date().getFullYear() ? 'today' : ''}`}>
+                  {day && (
+                    <>
+                      <div className="calendar-day-number">{day}</div>
+                      <div className="calendar-day-events">
+                        {dayRows.slice(0, 3).map(row => (
+                          <div key={row.id} className="calendar-event">
+                            {nameField ? getFieldValue(row, nameField.id) || '未命名' : `记录 #${row.id}`}
+                          </div>
+                        ))}
+                        {dayRows.length > 3 && (
+                          <div className="calendar-event-more">+{dayRows.length - 3} 更多</div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 渲染表格视图
+  const renderTableView = () => (
+    <div className="table-container">
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th style={{ width: 50 }}>#</th>
+            {fields.map(field => (
+              <th key={field.id}>
+                <div className="field-header">
+                  {field.name}
+                  <span className="field-type-badge">
+                    {field.type === 'text' ? '文本' :
+                     field.type === 'select' ? '选择' :
+                     field.type === 'date' ? '日期' :
+                     field.type === 'number' ? '数字' : field.type}
+                  </span>
+                </div>
+              </th>
+            ))}
+            <th className="add-field-column">
+              <button
+                className="add-field-btn"
+                onClick={() => setShowNewFieldModal(true)}
+              >
+                + 添加字段
+              </button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={row.id}>
+              <td style={{ color: '#999', fontSize: 12 }}>{index + 1}</td>
+              {fields.map(field => (
+                <td key={field.id}>
+                  {renderCell(row, field)}
+                </td>
+              ))}
+              <td className="add-field-column">
+                <button
+                  className="delete-row-btn"
+                  onClick={() => handleDeleteRow(row.id)}
+                >
+                  删除
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {rows.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
+          暂无数据，点击"新增行"添加数据
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <div className="app">
       {/* 侧边栏 */}
@@ -240,66 +526,38 @@ function App() {
             <div className="header">
               <h2 className="header-title">{currentTable.name}</h2>
               <div className="header-actions">
+                {/* 视图切换 */}
+                <div className="view-switcher">
+                  <button
+                    className={`view-btn ${viewMode === 'table' ? 'active' : ''}`}
+                    onClick={() => setViewMode('table')}
+                    title="表格视图"
+                  >
+                    ⊞
+                  </button>
+                  <button
+                    className={`view-btn ${viewMode === 'kanban' ? 'active' : ''}`}
+                    onClick={() => setViewMode('kanban')}
+                    title="看板视图"
+                  >
+                    ☰
+                  </button>
+                  <button
+                    className={`view-btn ${viewMode === 'calendar' ? 'active' : ''}`}
+                    onClick={() => setViewMode('calendar')}
+                    title="日历视图"
+                  >
+                    📅
+                  </button>
+                </div>
                 <button className="btn btn-secondary" onClick={handleAddRow}>
                   + 新增行
                 </button>
               </div>
             </div>
-            <div className="table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: 50 }}>#</th>
-                    {fields.map(field => (
-                      <th key={field.id}>
-                        <div className="field-header">
-                          {field.name}
-                          <span className="field-type-badge">
-                            {field.type === 'text' ? '文本' :
-                             field.type === 'select' ? '选择' :
-                             field.type === 'date' ? '日期' :
-                             field.type === 'number' ? '数字' : field.type}
-                          </span>
-                        </div>
-                      </th>
-                    ))}
-                    <th className="add-field-column">
-                      <button
-                        className="add-field-btn"
-                        onClick={() => setShowNewFieldModal(true)}
-                      >
-                        + 添加字段
-                      </button>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row, index) => (
-                    <tr key={row.id}>
-                      <td style={{ color: '#999', fontSize: 12 }}>{index + 1}</td>
-                      {fields.map(field => (
-                        <td key={field.id}>
-                          {renderCell(row, field)}
-                        </td>
-                      ))}
-                      <td className="add-field-column">
-                        <button
-                          className="delete-row-btn"
-                          onClick={() => handleDeleteRow(row.id)}
-                        >
-                          删除
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {rows.length === 0 && (
-                <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
-                  暂无数据，点击"新增行"添加数据
-                </div>
-              )}
-            </div>
+            {viewMode === 'table' && renderTableView()}
+            {viewMode === 'kanban' && renderKanbanView()}
+            {viewMode === 'calendar' && renderCalendarView()}
           </>
         ) : (
           <div className="empty-state">
