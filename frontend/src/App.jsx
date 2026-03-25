@@ -22,6 +22,10 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [toast, setToast] = useState(null)
 
+  // 字段编辑状态
+  const [showEditFieldModal, setShowEditFieldModal] = useState(false)
+  const [editingField, setEditingField] = useState(null)
+
   // 检测是否为移动端
   const [isMobile, setIsMobile] = useState(false)
 
@@ -142,6 +146,51 @@ function App() {
         options: [...newField.options, newOption.trim()]
       })
       setNewOption('')
+    }
+  }
+
+  // 更新字段
+  const handleUpdateField = async () => {
+    if (!editingField.name.trim()) return
+
+    setLoading(true)
+    try {
+      await fetch(`/api/fields/${editingField.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editingField.name,
+          type: editingField.type,
+          options: editingField.options
+        })
+      })
+      setFields(fields.map(f => {
+        if (f.id === editingField.id) {
+          return { ...f, name: editingField.name, type: editingField.type, options: JSON.stringify(editingField.options) }
+        }
+        return f
+      }))
+      setEditingField(null)
+      setShowEditFieldModal(false)
+      showToast('字段更新成功')
+    } catch (err) {
+      console.error('更新字段失败:', err)
+      showToast('更新失败', 'error')
+    }
+    setLoading(false)
+  }
+
+  // 删除字段
+  const handleDeleteField = async (fieldId) => {
+    if (!confirm('确定要删除这个字段吗？相关数据将被删除。')) return
+
+    try {
+      await fetch(`/api/fields/${fieldId}`, { method: 'DELETE' })
+      setFields(fields.filter(f => f.id !== fieldId))
+      showToast('字段已删除')
+    } catch (err) {
+      console.error('删除字段失败:', err)
+      showToast('删除失败', 'error')
     }
   }
 
@@ -548,13 +597,31 @@ function App() {
             {fields.map(field => (
               <th key={field.id}>
                 <div className="field-header">
-                  {field.name}
+                  <span
+                    className="field-name-clickable"
+                    onClick={() => {
+                      setEditingField({
+                        ...field,
+                        options: field.options ? JSON.parse(field.options) : []
+                      })
+                      setShowEditFieldModal(true)
+                    }}
+                  >
+                    {field.name}
+                  </span>
                   <span className="field-type-badge">
                     {field.type === 'text' ? '文本' :
                      field.type === 'select' ? '选择' :
                      field.type === 'date' ? '日期' :
                      field.type === 'number' ? '数字' : field.type}
                   </span>
+                  <button
+                    className="field-delete-btn"
+                    onClick={() => handleDeleteField(field.id)}
+                    title="删除字段"
+                  >
+                    ×
+                  </button>
                 </div>
               </th>
             ))}
@@ -830,6 +897,103 @@ function App() {
                 disabled={loading}
               >
                 {loading ? '添加中...' : '添加'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 编辑字段模态框 */}
+      {showEditFieldModal && editingField && (
+        <div className="modal-overlay" onClick={() => {
+          setShowEditFieldModal(false)
+          setEditingField(null)
+        }}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">编辑字段</div>
+            <div className="modal-body">
+              <input
+                type="text"
+                placeholder="字段名称"
+                value={editingField.name}
+                onChange={(e) => setEditingField({ ...editingField, name: e.target.value })}
+                style={{ marginBottom: 12 }}
+              />
+              <select
+                value={editingField.type}
+                onChange={(e) => setEditingField({ ...editingField, type: e.target.value, options: [] })}
+                style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ddd' }}
+              >
+                <option value="text">文本</option>
+                <option value="number">数字</option>
+                <option value="select">下拉选择</option>
+                <option value="date">日期</option>
+              </select>
+
+              {editingField.type === 'select' && (
+                <div className="field-config">
+                  <label>选项列表</label>
+                  <div className="options-list">
+                    {editingField.options.map((opt, i) => (
+                      <span key={i} className="option-tag">
+                        {opt}
+                        <button onClick={() => setEditingField({
+                          ...editingField,
+                          options: editingField.options.filter((_, idx) => idx !== i)
+                        })}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="add-option-row">
+                    <input
+                      type="text"
+                      placeholder="添加选项"
+                      value={newOption}
+                      onChange={(e) => setNewOption(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && newOption.trim()) {
+                          setEditingField({
+                            ...editingField,
+                            options: [...editingField.options, newOption.trim()]
+                          })
+                          setNewOption('')
+                        }
+                      }}
+                    />
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        if (newOption.trim()) {
+                          setEditingField({
+                            ...editingField,
+                            options: [...editingField.options, newOption.trim()]
+                          })
+                          setNewOption('')
+                        }
+                      }}
+                    >
+                      添加
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowEditFieldModal(false)
+                  setEditingField(null)
+                }}
+              >
+                取消
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleUpdateField}
+                disabled={loading}
+              >
+                {loading ? '保存中...' : '保存'}
               </button>
             </div>
           </div>
