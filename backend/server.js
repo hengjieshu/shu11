@@ -301,22 +301,7 @@ app.post('/api/yingdao/sales', (req, res) => {
   }
 
   const results = [];
-  const tableId = 1; // 实时销售表的ID
-
-  // 字段ID映射（根据实际创建的字段）
-  const fieldMap = {
-    '名称': 1,
-    '状态': 2,
-    '负责人': 3,
-    '创建时间': 4,
-    '商品名称': 5,
-    '数量': 6,
-    '单价': 7,
-    '总价': 8,
-    '销售渠道': 9,
-    '销售时间': 10,
-    '订单状态': 11
-  };
+  const tableId = 0; // 实时销售表的ID
 
   for (const record of records) {
     try {
@@ -350,9 +335,9 @@ app.post('/api/yingdao/sales', (req, res) => {
 
 // 影刀快速添加单条销售记录
 app.post('/api/yingdao/sale', (req, res) => {
-  const { 商品名称, 数量, 单价, 总价, 销售渠道, 销售时间, 订单状态 } = req.body;
+  const { 统计时间, 净支付金额 } = req.body;
 
-  const tableId = 1; // 实时销售表的ID
+  const tableId = 0; // 实时销售表的ID
 
   try {
     // 创建新行
@@ -360,7 +345,7 @@ app.post('/api/yingdao/sale', (req, res) => {
     const rowId = rowResult.lastInsertRowid;
 
     // 插入数据
-    const fields = { 商品名称, 数量, 单价, 总价, 销售渠道, 销售时间, 订单状态 };
+    const fields = { 统计时间, 净支付金额 };
     for (const [fieldName, value] of Object.entries(fields)) {
       if (value !== undefined && value !== null && value !== '') {
         const field = queryOne('SELECT id FROM fields WHERE table_id = ? AND name = ?', [tableId, fieldName]);
@@ -378,7 +363,7 @@ app.post('/api/yingdao/sale', (req, res) => {
 
 // 影刀清空销售数据（可选）
 app.delete('/api/yingdao/sales', (req, res) => {
-  const tableId = 1;
+  const tableId = 0;
 
   try {
     const rows = queryAll('SELECT id FROM rows WHERE table_id = ?', [tableId]);
@@ -398,7 +383,7 @@ app.delete('/api/yingdao/sales', (req, res) => {
 
 // 影刀获取字段列表
 app.get('/api/yingdao/fields', (req, res) => {
-  const tableId = 1;
+  const tableId = 0;
   const fields = queryAll('SELECT id, name, type, options FROM fields WHERE table_id = ? ORDER BY "order"', [tableId]);
   res.json(fields);
 });
