@@ -765,3 +765,617 @@ body {
   color: #999;
   padding: 2px 6px;
 }
+
+/* ===== 界面优化 ===== */
+
+/* Toast 消息 */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  z-index: 2000;
+  animation: slideIn 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.toast-success {
+  background: #10b981;
+}
+
+.toast-error {
+  background: #ef4444;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* 侧边栏折叠 */
+.sidebar-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.sidebar-toggle:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+.sidebar.collapsed {
+  transform: translateX(-100%);
+}
+
+.sidebar-overlay {
+  display: none;
+}
+
+/* Header 左侧 */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #333;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.menu-btn:hover {
+  background: #f0f2f5;
+}
+
+/* 表格斑马纹 */
+.row-even {
+  background: white;
+}
+
+.row-odd {
+  background: #fafbfc;
+}
+
+.data-table tr:hover td {
+  background: #e8f4fd !important;
+}
+
+/* 空数据提示 */
+.empty-data {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.empty-data p {
+  color: #999;
+  margin-bottom: 16px;
+}
+
+/* 选项标签 */
+.options-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.option-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #e8f4fd;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #3498db;
+}
+
+.option-tag button {
+  background: none;
+  border: none;
+  color: #3498db;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+}
+
+.option-tag button:hover {
+  color: #e74c3c;
+}
+
+.add-option-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.add-option-row input {
+  flex: 1;
+}
+
+/* ===== 响应式布局 ===== */
+
+/* 平板 */
+@media (max-width: 1024px) {
+  .kanban-column {
+    min-width: 240px;
+    max-width: 240px;
+  }
+
+  .calendar-day {
+    min-height: 80px;
+  }
+}
+
+/* 手机 */
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar.collapsed {
+    transform: translateX(-100%);
+  }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 99;
+  }
+
+  .sidebar-toggle {
+    display: block;
+  }
+
+  .menu-btn {
+    display: block;
+  }
+
+  .header {
+    padding: 12px 16px;
+  }
+
+  .header-title {
+    font-size: 16px;
+  }
+
+  .header-actions {
+    gap: 8px;
+  }
+
+  .btn {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .table-container {
+    padding: 12px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  /* 表格横向滚动 */
+  .table-container {
+    overflow-x: auto;
+  }
+
+  .data-table {
+    min-width: 600px;
+  }
+
+  /* 看板视图 */
+  .kanban-container {
+    padding: 12px;
+  }
+
+  .kanban-column {
+    min-width: 260px;
+    max-width: 260px;
+  }
+
+  /* 日历视图 */
+  .calendar-container {
+    padding: 12px;
+  }
+
+  .calendar-day {
+    min-height: 60px;
+    padding: 4px;
+  }
+
+  .calendar-day-number {
+    font-size: 12px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .calendar-event {
+    font-size: 10px;
+  }
+
+  .calendar-weekday {
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+
+  /* 模态框 */
+  .modal {
+    width: calc(100% - 32px);
+    padding: 20px;
+  }
+
+  /* Toast */
+  .toast {
+    left: 16px;
+    right: 16px;
+    text-align: center;
+  }
+
+  /* ===== 移动端卡片视图 ===== */
+  .mobile-cards-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    padding-bottom: 100px;
+  }
+
+  .empty-data {
+    padding: 40px 20px;
+  }
+
+  .mobile-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  .mobile-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f2f5;
+  }
+
+  .mobile-card-number {
+    font-size: 12px;
+    color: #999;
+    font-weight: 500;
+  }
+
+  .mobile-card-delete {
+    background: #fee2e2;
+    color: #dc2626;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .mobile-card-delete:active {
+    background: #fecaca;
+  }
+
+  .mobile-card-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .mobile-card-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .mobile-card-field-label {
+    font-size: 12px;
+    color: #999;
+    font-weight: 500;
+  }
+
+  .mobile-card-field-value input,
+  .mobile-card-field-value select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e1e4e8;
+    border-radius: 8px;
+    font-size: 15px;
+    background: #fafbfc;
+  }
+
+  .mobile-card-field-value input:focus,
+  .mobile-card-field-value select:focus {
+    outline: none;
+    border-color: #3498db;
+    background: white;
+  }
+
+  .mobile-add-btn {
+    width: 100%;
+    padding: 16px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 12px;
+  }
+
+  .mobile-add-btn:active {
+    background: #2980b9;
+  }
+
+  /* 删除按钮在移动端始终可见 */
+  .delete-row-btn {
+    opacity: 1 !important;
+    background: #fee2e2 !important;
+    color: #dc2626 !important;
+    padding: 6px 10px !important;
+    border-radius: 4px;
+  }
+
+  .kanban-card-delete {
+    opacity: 1 !important;
+  }
+
+  /* 看板卡片优化触摸 */
+  .kanban-card {
+    padding: 14px;
+  }
+
+  .kanban-card-title {
+    font-size: 15px;
+    padding-right: 24px;
+  }
+
+  /* 日历视图移动端优化 - 改为列表模式 */
+  .calendar-grid {
+    display: none;
+  }
+
+  .calendar-list {
+    display: block !important;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .calendar-list-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f0f2f5;
+    gap: 12px;
+  }
+
+  .calendar-list-item:last-child {
+    border-bottom: none;
+  }
+
+  .calendar-list-item.today {
+    background: #e8f4fd;
+  }
+
+  .calendar-list-date {
+    min-width: 50px;
+    text-align: center;
+  }
+
+  .calendar-list-date-day {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .calendar-list-date-weekday {
+    font-size: 11px;
+    color: #999;
+  }
+
+  .calendar-list-events {
+    flex: 1;
+  }
+
+  .calendar-list-event {
+    font-size: 14px;
+    color: #333;
+    padding: 4px 0;
+  }
+
+  .calendar-list-empty {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+  }
+
+  /* 底部操作栏 */
+  .mobile-bottom-bar {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    gap: 10px;
+    z-index: 50;
+  }
+
+  .mobile-bottom-bar .btn {
+    flex: 1;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 10px;
+  }
+
+  /* 视图切换按钮优化 */
+  .view-switcher {
+    background: white;
+    border: 1px solid #e1e4e8;
+    padding: 2px;
+  }
+
+  .view-btn {
+    padding: 8px 14px;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .view-btn.active {
+    background: #3498db;
+    color: white;
+  }
+
+  /* 模态框优化 */
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px;
+    padding-bottom: 34px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    font-size: 18px;
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f0f2f5;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 15px;
+  }
+
+  /* 表格项目优化触摸 */
+  .table-item {
+    padding: 14px 12px;
+  }
+
+  .table-item-delete {
+    opacity: 0.7 !important;
+  }
+
+  /* 添加表格按钮 */
+  .add-table-btn {
+    padding: 14px 12px;
+  }
+
+  /* 空状态优化 */
+  .empty-state-icon {
+    font-size: 48px;
+  }
+
+  .empty-state-text {
+    font-size: 15px;
+  }
+
+  /* 侧边栏优化 */
+  .sidebar-header h1 {
+    font-size: 18px;
+  }
+}
+
+/* 小手机 */
+@media (max-width: 480px) {
+  .header-left {
+    gap: 8px;
+  }
+
+  .header-title {
+    font-size: 14px;
+  }
+
+  .view-btn {
+    padding: 4px 8px;
+    font-size: 14px;
+  }
+
+  .kanban-column {
+    min-width: 220px;
+    max-width: 220px;
+  }
+
+  .kanban-card {
+    padding: 10px;
+  }
+
+  .kanban-card-title {
+    font-size: 13px;
+  }
+
+  .kanban-card-field {
+    font-size: 11px;
+  }
+}

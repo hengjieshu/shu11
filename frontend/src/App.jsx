@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 function App() {
   const [tables, setTables] = useState([])
@@ -13,10 +13,32 @@ function App() {
   const [loading, setLoading] = useState(false)
 
   // 视图模式状态
-  const [viewMode, setViewMode] = useState('table') // 'table' | 'kanban' | 'calendar'
-  const [kanbanField, setKanbanField] = useState(null) // 看板分组字段
-  const [dateField, setDateField] = useState(null) // 日历日期字段
-  const [currentMonth, setCurrentMonth] = useState(new Date()) // 日历当前月份
+  const [viewMode, setViewMode] = useState('table')
+  const [kanbanField, setKanbanField] = useState(null)
+  const [dateField, setDateField] = useState(null)
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+
+  // 界面状态
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [toast, setToast] = useState(null)
+
+  // 检测是否为移动端
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Toast 消息提示
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }, [])
 
   // 加载所有表格
   useEffect(() => {
@@ -36,10 +58,8 @@ function App() {
         .then(([fieldsData, rowsData]) => {
           setFields(fieldsData)
           setRows(rowsData)
-          // 自动选择看板字段（第一个select类型）
           const selectField = fieldsData.find(f => f.type === 'select')
           setKanbanField(selectField || null)
-          // 自动选择日期字段
           const dateFld = fieldsData.find(f => f.type === 'date')
           setDateField(dateFld || null)
         })
@@ -63,8 +83,10 @@ function App() {
       setCurrentTable(newTable)
       setNewTableName('')
       setShowNewTableModal(false)
+      showToast('表格创建成功')
     } catch (err) {
       console.error('创建表格失败:', err)
+      showToast('创建失败，请重试', 'error')
     }
     setLoading(false)
   }
@@ -82,8 +104,10 @@ function App() {
         setFields([])
         setRows([])
       }
+      showToast('表格已删除')
     } catch (err) {
       console.error('删除表格失败:', err)
+      showToast('删除失败', 'error')
     }
   }
 
@@ -102,8 +126,10 @@ function App() {
       setFields([...fields, { ...field, options: newField.options }])
       setNewField({ name: '', type: 'text', options: [] })
       setShowNewFieldModal(false)
+      showToast('字段添加成功')
     } catch (err) {
       console.error('创建字段失败:', err)
+      showToast('添加失败', 'error')
     }
     setLoading(false)
   }
@@ -129,8 +155,10 @@ function App() {
       })
       const newRow = await res.json()
       setRows([newRow, ...rows])
+      showToast('已添加新行')
     } catch (err) {
       console.error('创建行失败:', err)
+      showToast('添加失败', 'error')
     }
   }
 
@@ -144,7 +172,6 @@ function App() {
           data: { [`field_${fieldId}`]: value }
         })
       })
-      // 更新本地状态
       setRows(rows.map(r => {
         if (r.id === rowId) {
           return { ...r, [`field_${fieldId}`]: value }
@@ -153,6 +180,7 @@ function App() {
       }))
     } catch (err) {
       console.error('更新单元格失败:', err)
+      showToast('保存失败', 'error')
     }
   }
 
@@ -163,8 +191,10 @@ function App() {
     try {
       await fetch(`/api/rows/${rowId}`, { method: 'DELETE' })
       setRows(rows.filter(r => r.id !== rowId))
+      showToast('已删除')
     } catch (err) {
       console.error('删除行失败:', err)
+      showToast('删除失败', 'error')
     }
   }
 
@@ -232,7 +262,7 @@ function App() {
     }
 
     const options = kanbanField.options ? JSON.parse(kanbanField.options) : []
-    const nameField = fields.find(f => f.type === 'text') // 用于显示卡片标题
+    const nameField = fields.find(f => f.type === 'text')
 
     return (
       <div className="kanban-container">
@@ -289,7 +319,6 @@ function App() {
               </div>
             )
           })}
-          {/* 未分类列 */}
           <div className="kanban-column">
             <div className="kanban-column-header">
               <span className="kanban-column-title">未分类</span>
@@ -337,11 +366,9 @@ function App() {
       const startingDay = firstDay.getDay()
 
       const days = []
-      // 前置空白
       for (let i = 0; i < startingDay; i++) {
         days.push(null)
       }
-      // 月份日期
       for (let i = 1; i <= daysInMonth; i++) {
         days.push(i)
       }
@@ -369,6 +396,45 @@ function App() {
     const weekDays = ['日', '一', '二', '三', '四', '五', '六']
     const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
 
+    // 移动端列表视图
+    const renderMobileList = () => {
+      const items = []
+      days.forEach((day, index) => {
+        if (day) {
+          const dayRows = getRowsForDate(day)
+          if (dayRows.length > 0) {
+            const today = new Date()
+            const isToday = day === today.getDate() &&
+              currentMonth.getMonth() === today.getMonth() &&
+              currentMonth.getFullYear() === today.getFullYear()
+            items.push(
+              <div key={index} className={`calendar-list-item ${isToday ? 'today' : ''}`}>
+                <div className="calendar-list-date">
+                  <div className="calendar-list-date-day">{day}</div>
+                  <div className="calendar-list-date-weekday">周{weekDays[new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).getDay()]}</div>
+                </div>
+                <div className="calendar-list-events">
+                  {dayRows.map(row => (
+                    <div key={row.id} className="calendar-list-event">
+                      {nameField ? getFieldValue(row, nameField.id) || '未命名' : `记录 #${row.id}`}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          }
+        }
+      })
+
+      return (
+        <div className="calendar-list" style={{ display: isMobile ? 'block' : 'none' }}>
+          {items.length > 0 ? items : (
+            <div className="calendar-list-empty">本月暂无日程</div>
+          )}
+        </div>
+      )
+    }
+
     return (
       <div className="calendar-container">
         <div className="calendar-settings">
@@ -389,40 +455,88 @@ function App() {
           </span>
           <button className="calendar-nav-btn" onClick={nextMonth}>›</button>
         </div>
-        <div className="calendar-grid">
-          <div className="calendar-weekdays">
-            {weekDays.map(day => (
-              <div key={day} className="calendar-weekday">{day}</div>
-            ))}
+        {!isMobile && (
+          <div className="calendar-grid">
+            <div className="calendar-weekdays">
+              {weekDays.map(day => (
+                <div key={day} className="calendar-weekday">{day}</div>
+              ))}
+            </div>
+            <div className="calendar-days">
+              {days.map((day, index) => {
+                const dayRows = getRowsForDate(day)
+                const today = new Date()
+                const isToday = day === today.getDate() &&
+                  currentMonth.getMonth() === today.getMonth() &&
+                  currentMonth.getFullYear() === today.getFullYear()
+                return (
+                  <div key={index} className={`calendar-day ${day ? '' : 'empty'} ${isToday ? 'today' : ''}`}>
+                    {day && (
+                      <>
+                        <div className="calendar-day-number">{day}</div>
+                        <div className="calendar-day-events">
+                          {dayRows.slice(0, 3).map(row => (
+                            <div key={row.id} className="calendar-event">
+                              {nameField ? getFieldValue(row, nameField.id) || '未命名' : `记录 #${row.id}`}
+                            </div>
+                          ))}
+                          {dayRows.length > 3 && (
+                            <div className="calendar-event-more">+{dayRows.length - 3} 更多</div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
-          <div className="calendar-days">
-            {days.map((day, index) => {
-              const dayRows = getRowsForDate(day)
-              return (
-                <div key={index} className={`calendar-day ${day ? '' : 'empty'} ${day === new Date().getDate() && currentMonth.getMonth() === new Date().getMonth() && currentMonth.getFullYear() === new Date().getFullYear() ? 'today' : ''}`}>
-                  {day && (
-                    <>
-                      <div className="calendar-day-number">{day}</div>
-                      <div className="calendar-day-events">
-                        {dayRows.slice(0, 3).map(row => (
-                          <div key={row.id} className="calendar-event">
-                            {nameField ? getFieldValue(row, nameField.id) || '未命名' : `记录 #${row.id}`}
-                          </div>
-                        ))}
-                        {dayRows.length > 3 && (
-                          <div className="calendar-event-more">+{dayRows.length - 3} 更多</div>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        )}
+        {renderMobileList()}
       </div>
     )
   }
+
+  // 渲染移动端卡片视图
+  const renderMobileCardView = () => (
+    <div className="mobile-cards-container">
+      {rows.length === 0 ? (
+        <div className="empty-data">
+          <p>暂无数据</p>
+          <button className="btn btn-primary" onClick={handleAddRow}>添加第一条</button>
+        </div>
+      ) : (
+        <>
+          {rows.map((row, index) => (
+            <div key={row.id} className="mobile-card">
+              <div className="mobile-card-header">
+                <span className="mobile-card-number">#{index + 1}</span>
+                <button
+                  className="mobile-card-delete"
+                  onClick={() => handleDeleteRow(row.id)}
+                >
+                  删除
+                </button>
+              </div>
+              <div className="mobile-card-fields">
+                {fields.map(field => (
+                  <div key={field.id} className="mobile-card-field">
+                    <label className="mobile-card-field-label">{field.name}</label>
+                    <div className="mobile-card-field-value">
+                      {renderCell(row, field)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          <button className="mobile-add-btn" onClick={handleAddRow}>
+            + 添加新行
+          </button>
+        </>
+      )}
+    </div>
+  )
 
   // 渲染表格视图
   const renderTableView = () => (
@@ -456,7 +570,7 @@ function App() {
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={row.id}>
+            <tr key={row.id} className={index % 2 === 0 ? 'row-even' : 'row-odd'}>
               <td style={{ color: '#999', fontSize: 12 }}>{index + 1}</td>
               {fields.map(field => (
                 <td key={field.id}>
@@ -476,19 +590,38 @@ function App() {
         </tbody>
       </table>
       {rows.length === 0 && (
-        <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
-          暂无数据，点击"新增行"添加数据
+        <div className="empty-data">
+          <p>暂无数据</p>
+          <button className="btn btn-primary" onClick={handleAddRow}>添加第一行</button>
         </div>
       )}
     </div>
   )
 
   return (
-    <div className="app">
+    <div className={`app ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      {/* Toast 消息 */}
+      {toast && (
+        <div className={`toast toast-${toast.type}`}>
+          {toast.message}
+        </div>
+      )}
+
+      {/* 移动端遮罩 */}
+      {!sidebarCollapsed && (
+        <div className="sidebar-overlay" onClick={() => setSidebarCollapsed(true)} />
+      )}
+
       {/* 侧边栏 */}
-      <div className="sidebar">
+      <div className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
           <h1>📊 多维表</h1>
+          <button
+            className="sidebar-toggle"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          >
+            {sidebarCollapsed ? '☰' : '✕'}
+          </button>
         </div>
         <div className="sidebar-content">
           <ul className="table-list">
@@ -496,7 +629,12 @@ function App() {
               <li
                 key={table.id}
                 className={`table-item ${currentTable?.id === table.id ? 'active' : ''}`}
-                onClick={() => setCurrentTable(table)}
+                onClick={() => {
+                  setCurrentTable(table)
+                  if (window.innerWidth < 768) {
+                    setSidebarCollapsed(true)
+                  }
+                }}
               >
                 <span className="table-item-icon">📋</span>
                 <span className="table-item-name">{table.name}</span>
@@ -524,9 +662,16 @@ function App() {
         {currentTable ? (
           <>
             <div className="header">
-              <h2 className="header-title">{currentTable.name}</h2>
+              <div className="header-left">
+                <button
+                  className="menu-btn"
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                >
+                  ☰
+                </button>
+                <h2 className="header-title">{currentTable.name}</h2>
+              </div>
               <div className="header-actions">
-                {/* 视图切换 */}
                 <div className="view-switcher">
                   <button
                     className={`view-btn ${viewMode === 'table' ? 'active' : ''}`}
@@ -550,12 +695,12 @@ function App() {
                     📅
                   </button>
                 </div>
-                <button className="btn btn-secondary" onClick={handleAddRow}>
-                  + 新增行
+                <button className="btn btn-primary" onClick={handleAddRow}>
+                  + 新增
                 </button>
               </div>
             </div>
-            {viewMode === 'table' && renderTableView()}
+            {viewMode === 'table' && (isMobile ? renderMobileCardView() : renderTableView())}
             {viewMode === 'kanban' && renderKanbanView()}
             {viewMode === 'calendar' && renderCalendarView()}
           </>
@@ -572,6 +717,18 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* 移动端底部操作栏 */}
+      {isMobile && currentTable && (
+        <div className="mobile-bottom-bar">
+          <button className="btn btn-primary" onClick={handleAddRow}>
+            + 新增记录
+          </button>
+          <button className="btn btn-secondary" onClick={() => setShowNewFieldModal(true)}>
+            + 字段
+          </button>
+        </div>
+      )}
 
       {/* 新建表格模态框 */}
       {showNewTableModal && (
@@ -599,7 +756,7 @@ function App() {
                 onClick={handleCreateTable}
                 disabled={loading}
               >
-                创建
+                {loading ? '创建中...' : '创建'}
               </button>
             </div>
           </div>
@@ -633,19 +790,18 @@ function App() {
               {newField.type === 'select' && (
                 <div className="field-config">
                   <label>选项列表</label>
-                  {newField.options.map((opt, i) => (
-                    <div key={i} style={{
-                      display: 'inline-block',
-                      background: '#e8f4fd',
-                      padding: '4px 10px',
-                      borderRadius: 4,
-                      margin: '4px 4px 4px 0',
-                      fontSize: 13
-                    }}>
-                      {opt}
-                    </div>
-                  ))}
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <div className="options-list">
+                    {newField.options.map((opt, i) => (
+                      <span key={i} className="option-tag">
+                        {opt}
+                        <button onClick={() => setNewField({
+                          ...newField,
+                          options: newField.options.filter((_, idx) => idx !== i)
+                        })}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="add-option-row">
                     <input
                       type="text"
                       placeholder="添加选项"
@@ -673,7 +829,7 @@ function App() {
                 onClick={handleCreateField}
                 disabled={loading}
               >
-                添加
+                {loading ? '添加中...' : '添加'}
               </button>
             </div>
           </div>
