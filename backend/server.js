@@ -104,8 +104,12 @@ function queryOne(sql, params = []) {
 // 辅助函数：执行插入/更新/删除并返回最后插入的 ID
 function runSQL(sql, params = []) {
   db.run(sql, params);
+  // 必须在 saveDB 之前获取 lastInsertRowid
+  const result = db.exec("SELECT last_insert_rowid() as id");
+  const lastId = result[0]?.values[0]?.[0] || 0;
   saveDB();
-  return { lastInsertRowid: db.exec("SELECT last_insert_rowid() as id")[0]?.values[0]?.[0] };
+  console.log(`runSQL: ${sql}, lastId: ${lastId}`);
+  return { lastInsertRowid: lastId };
 }
 
 // ==================== 表格 API ====================
@@ -285,7 +289,9 @@ app.post('/api/yingdao/sales', (req, res) => {
   }
 
   const results = [];
-  const tableId = 0; // 实时销售表的ID
+  const tableId = 7; // 实时销售表的ID
+
+
 
   for (const record of records) {
     try {
@@ -321,7 +327,9 @@ app.post('/api/yingdao/sales', (req, res) => {
 app.post('/api/yingdao/sale', (req, res) => {
   const { 统计时间, 净支付金额 } = req.body;
 
-  const tableId = 0; // 实时销售表的ID
+  const tableId = 7; // 实时销售表的ID
+
+
 
   try {
     // 创建新行
