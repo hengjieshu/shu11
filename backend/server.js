@@ -282,16 +282,17 @@ app.delete('/api/rows/:id', (req, res) => {
 
 // 影刀批量导入销售数据
 app.post('/api/yingdao/sales', (req, res) => {
-  const { records } = req.body;
+  const { records, tableName } = req.body;
 
   if (!Array.isArray(records) || records.length === 0) {
     return res.status(400).json({ error: '请提供销售记录数组' });
   }
 
-  // 动态查找"实时销售"表格的ID
-  const tableInfo = queryOne("SELECT id FROM tables WHERE name = '实时销售' ORDER BY created_at DESC");
+  // 动态查找表格的ID（支持通过 tableName 指定，默认为"实时销售"）
+  const targetTableName = tableName || '实时销售';
+  const tableInfo = queryOne("SELECT id FROM tables WHERE name = ? ORDER BY created_at DESC", [targetTableName]);
   if (!tableInfo) {
-    return res.status(404).json({ error: '未找到实时销售表格' });
+    return res.status(404).json({ error: `未找到表格: ${targetTableName}` });
   }
   const tableId = tableInfo.id;
 
@@ -329,12 +330,13 @@ app.post('/api/yingdao/sales', (req, res) => {
 
 // 影刀快速添加单条销售记录
 app.post('/api/yingdao/sale', (req, res) => {
-  const { 统计时间, 净支付金额 } = req.body;
+  const { tableName, ...data } = req.body;
 
-  // 动态查找"实时销售"表格的ID
-  const tableInfo = queryOne("SELECT id FROM tables WHERE name = '实时销售' ORDER BY created_at DESC");
+  // 动态查找表格的ID（支持通过 tableName 指定，默认为"实时销售"）
+  const targetTableName = tableName || '实时销售';
+  const tableInfo = queryOne("SELECT id FROM tables WHERE name = ? ORDER BY created_at DESC", [targetTableName]);
   if (!tableInfo) {
-    return res.status(404).json({ error: '未找到实时销售表格' });
+    return res.status(404).json({ error: `未找到表格: ${targetTableName}` });
   }
   const tableId = tableInfo.id;
 
@@ -343,9 +345,8 @@ app.post('/api/yingdao/sale', (req, res) => {
     const rowResult = runSQL('INSERT INTO rows (table_id) VALUES (?)', [tableId]);
     const rowId = rowResult.lastInsertRowid;
 
-    // 插入数据
-    const fields = { 统计时间, 净支付金额 };
-    for (const [fieldName, value] of Object.entries(fields)) {
+    // 插入数据（排除 tableName 字段）
+    for (const [fieldName, value] of Object.entries(data)) {
       if (value !== undefined && value !== null && value !== '') {
         const field = queryOne('SELECT id FROM fields WHERE table_id = ? AND name = ?', [tableId, fieldName]);
         if (field) {
@@ -362,10 +363,13 @@ app.post('/api/yingdao/sale', (req, res) => {
 
 // 影刀清空销售数据（可选）
 app.delete('/api/yingdao/sales', (req, res) => {
-  // 动态查找"实时销售"表格的ID
-  const tableInfo = queryOne("SELECT id FROM tables WHERE name = '实时销售' ORDER BY created_at DESC");
+  const { tableName } = req.body || {};
+
+  // 动态查找表格的ID（支持通过 tableName 指定，默认为"实时销售"）
+  const targetTableName = tableName || '实时销售';
+  const tableInfo = queryOne("SELECT id FROM tables WHERE name = ? ORDER BY created_at DESC", [targetTableName]);
   if (!tableInfo) {
-    return res.status(404).json({ error: '未找到实时销售表格' });
+    return res.status(404).json({ error: `未找到表格: ${targetTableName}` });
   }
   const tableId = tableInfo.id;
 
@@ -387,10 +391,13 @@ app.delete('/api/yingdao/sales', (req, res) => {
 
 // 影刀获取字段列表
 app.get('/api/yingdao/fields', (req, res) => {
-  // 动态查找"实时销售"表格的ID
-  const tableInfo = queryOne("SELECT id FROM tables WHERE name = '实时销售' ORDER BY created_at DESC");
+  // 支持通过 URL 参数指定表格名称，如 /api/yingdao/fields?tableName=其他表格
+  const targetTableName = req.query.tableName || '实时销售';
+
+  // 动态查找表格的ID
+  const tableInfo = queryOne("SELECT id FROM tables WHERE name = ? ORDER BY created_at DESC", [targetTableName]);
   if (!tableInfo) {
-    return res.status(404).json({ error: '未找到实时销售表格' });
+    return res.status(404).json({ error: `未找到表格: ${targetTableName}` });
   }
   const tableId = tableInfo.id;
 
