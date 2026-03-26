@@ -1080,12 +1080,97 @@ body {
     text-align: center;
   }
 
-  /* ===== 移动端卡片视图 ===== */
-  .mobile-cards-container {
+  /* ===== 移动端表格视图 ===== */
+  .mobile-table-container {
     flex: 1;
     overflow-y: auto;
     padding: 12px;
     padding-bottom: 100px;
+  }
+
+  .mobile-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .mobile-th {
+    padding: 12px 8px;
+    background: #f8f9fa;
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    text-align: left;
+    border-bottom: 1px solid #e1e4e8;
+  }
+
+  .mobile-th-num {
+    width: 40px;
+    text-align: center;
+  }
+
+  .mobile-th-action {
+    width: 60px;
+    text-align: center;
+  }
+
+  .mobile-td {
+    padding: 10px 8px;
+    font-size: 13px;
+    border-bottom: 1px solid #f0f2f5;
+    vertical-align: middle;
+  }
+
+  .mobile-td-num {
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+  }
+
+  .mobile-td-action {
+    text-align: center;
+  }
+
+  .mobile-row:nth-child(even) {
+    background: #fafbfc;
+  }
+
+  .mobile-row:active {
+    background: #e8f4fd;
+  }
+
+  .mobile-delete-btn {
+    background: #fee2e2;
+    color: #dc2626;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .mobile-delete-btn:active {
+    background: #fecaca;
+  }
+
+  .mobile-td input,
+  .mobile-td select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #e1e4e8;
+    border-radius: 4px;
+    font-size: 13px;
+    background: #fafbfc;
+  }
+
+  .mobile-td input:focus,
+  .mobile-td select:focus {
+    outline: none;
+    border-color: #3498db;
+    background: white;
   }
 
   .empty-data {

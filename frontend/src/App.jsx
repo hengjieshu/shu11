@@ -276,6 +276,16 @@ function App() {
       )
     }
 
+    if (field.type === 'datetime') {
+      return (
+        <input
+          type="datetime-local"
+          value={value}
+          onChange={(e) => handleCellUpdate(row.id, field.id, e.target.value)}
+        />
+      )
+    }
+
     if (field.type === 'number') {
       return (
         <input
@@ -546,9 +556,9 @@ function App() {
     )
   }
 
-  // 渲染移动端卡片视图
+  // 渲染移动端卡片视图（表格样式）
   const renderMobileCardView = () => (
-    <div className="mobile-cards-container">
+    <div className="mobile-table-container">
       {rows.length === 0 ? (
         <div className="empty-data">
           <p>暂无数据</p>
@@ -556,29 +566,39 @@ function App() {
         </div>
       ) : (
         <>
-          {rows.map((row, index) => (
-            <div key={row.id} className="mobile-card">
-              <div className="mobile-card-header">
-                <span className="mobile-card-number">#{index + 1}</span>
-                <button
-                  className="mobile-card-delete"
-                  onClick={() => handleDeleteRow(row.id)}
-                >
-                  删除
-                </button>
-              </div>
-              <div className="mobile-card-fields">
+          <table className="mobile-data-table">
+            <thead>
+              <tr>
+                <th className="mobile-th-num">#</th>
                 {fields.map(field => (
-                  <div key={field.id} className="mobile-card-field">
-                    <label className="mobile-card-field-label">{field.name}</label>
-                    <div className="mobile-card-field-value">
-                      {renderCell(row, field)}
-                    </div>
-                  </div>
+                  <th key={field.id} className="mobile-th">
+                    {field.name}
+                  </th>
                 ))}
-              </div>
-            </div>
-          ))}
+                <th className="mobile-th-action">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr key={row.id} className="mobile-row">
+                  <td className="mobile-td-num">{index + 1}</td>
+                  {fields.map(field => (
+                    <td key={field.id} className="mobile-td">
+                      {renderCell(row, field)}
+                    </td>
+                  ))}
+                  <td className="mobile-td-action">
+                    <button
+                      className="mobile-delete-btn"
+                      onClick={() => handleDeleteRow(row.id)}
+                    >
+                      删除
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           <button className="mobile-add-btn" onClick={handleAddRow}>
             + 添加新行
           </button>
@@ -613,6 +633,7 @@ function App() {
                     {field.type === 'text' ? '文本' :
                      field.type === 'select' ? '选择' :
                      field.type === 'date' ? '日期' :
+                     field.type === 'datetime' ? '日期时间' :
                      field.type === 'number' ? '数字' : field.type}
                   </span>
                   <button
@@ -852,6 +873,7 @@ function App() {
                 <option value="number">数字</option>
                 <option value="select">下拉选择</option>
                 <option value="date">日期</option>
+                <option value="datetime">日期时间</option>
               </select>
 
               {newField.type === 'select' && (
@@ -928,6 +950,7 @@ function App() {
                 <option value="number">数字</option>
                 <option value="select">下拉选择</option>
                 <option value="date">日期</option>
+                <option value="datetime">日期时间</option>
               </select>
 
               {editingField.type === 'select' && (
