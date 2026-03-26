@@ -120,22 +120,6 @@ app.get('/api/tables', (req, res) => {
 app.post('/api/tables', (req, res) => {
   const { name } = req.body;
   const result = runSQL('INSERT INTO tables (name) VALUES (?)', [name]);
-
-  // 创建默认字段
-  const defaultFields = [
-    { name: '名称', type: 'text', order: 0 },
-    { name: '状态', type: 'select', order: 1, options: JSON.stringify(['未开始', '进行中', '已完成']) },
-    { name: '负责人', type: 'text', order: 2 },
-    { name: '创建时间', type: 'date', order: 3 }
-  ];
-
-  for (const field of defaultFields) {
-    runSQL(
-      'INSERT INTO fields (table_id, name, type, options, "order") VALUES (?, ?, ?, ?, ?)',
-      [result.lastInsertRowid, field.name, field.type, field.options || null, field.order]
-    );
-  }
-
   res.json({ id: result.lastInsertRowid, name });
 });
 
